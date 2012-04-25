@@ -1,0 +1,22 @@
+.x-form-rating-field {
+}
+.x-form-rating-field .x-field-star {
+	float: left;
+	height: 21px;
+	width: 21px;
+	background-repeat: no-repeat;
+	background-position: center center;
+	cursor: pointer;
+	background-image: url(star_un.png);
+	
+	
+}
+.x-form-rating-field .x-field-star.x-star-selected {
+background-image: url(star.png);
+
+}
+
+
+.x-form-rating-field .x-field-star:hover {
+	background-image: url(star_over.png);
+}
