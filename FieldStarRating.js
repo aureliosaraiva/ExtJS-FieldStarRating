@@ -25,8 +25,8 @@
  */
 
 /*
- * @Version: 0.1
- * @Release: 2012-04-24
+ * @Version: 0.2
+ * @Release: 2012-04-27
  */
 Ext.define('Ext.ux.form.FieldStarRating', {
 	extend : 'Ext.form.field.Base',
@@ -42,98 +42,156 @@ Ext.define('Ext.ux.form.FieldStarRating', {
 	 * Define a quantidade de itens o componente vai ter bem como os valores de retorno para cada item
 	 * @default [1, 2, 3, 4, 5]
 	 */
-	starsValues : [1, 2, 3, 4, 5],
-
-	indexSelected : -1,
+	items : [1, 2, 3, 4, 5],
+	startText : false,
+	endTest : false,
 
 	initEvents : function() {
 		this.callParent();
 
-		this.inputEl.on('mouseover', this._mouseover, this, {
-			delegate : 'div.x-field-star'
+		this.inputEl.on('mouseover', this._over, this, {
+			delegate : 'span.x-rating-item'
 		});
 
-		this.inputEl.on('mouseout', this._mouseout, this, {
-			delegate : 'div.x-field-star'
+		this.inputEl.on('mouseout', this._out, this, {
+			delegate : 'span.x-rating-item'
 		});
 
 		this.inputEl.on('click', this._click, this, {
-			delegate : 'div.x-field-star'
+			delegate : 'span.x-rating-item'
 		});
 
 	},
 	setValue : function(v) {
-		this.callParent(arguments);
-
-		if(this.starEl) {
-			Ext.each(this.starsValues, function(o, i) {
+		var me = this;
+		me.callParent(arguments);
+		me.markRating(v);
+	},
+	markRating : function(v) {
+		var me = this, re = false;
+		if(me.rendered) {
+			Ext.each(this.items, function(o, i) {
+				var va = o.getAttribute('value');
 				if(!v) {
-					this.indexSelected = -1;
-					this.starEl[i].removeCls('x-star-selected');
+					o.removeCls('x-rating-selected');
 				} else {
-					this.starEl[i].addCls('x-star-selected');
-					if(o == v) {
-						this.indexSelected = i;
-						return false;
+					if(!re) {
+						o.addCls('x-rating-selected');
+						if(va == v) {
+							re = true;
+						}
+					} else {
+						o.removeCls('x-rating-selected');
 					}
 				}
-			}, this);
+			}, me);
+			this.hiddenField.dom.value = v;
 		}
 	},
 	onRender : function() {
-		this.callParent(arguments);
+		var me = this;
+		me.callParent(arguments);
 
-		var name = this.name || Ext.id();
-		this.hiddenField = this.inputEl.insertSibling({
+		var name = me.name || Ext.id();
+		me.hiddenField = me.inputEl.insertSibling({
 			tag : 'input',
 			type : 'hidden',
 			name : name
 
 		});
 
-		this.setValue = Ext.Function.createSequence(this.setValue, this._onUpdateHidden, this);
+		var skell = [], childs = [];
 
-		var starEl = [];
-		Ext.each(this.starsValues, function(o, i) {
-			starEl.push(Ext.DomHelper.append(this.inputEl, {
+		if(me.startText) {
+			skell.push({
 				tag : 'div',
-				rate : i,
-				cls : 'x-field-star'
-			}, true));
+				html : me.startText,
+				cls : 'x-rating-text'
+			});
+		}
+
+		Ext.each(this.items, function(o, i) {
+
+			if(!Ext.isObject(o)) {
+				o = {
+					value : o
+				};
+			}
+
+			if(o.text) {
+				if(!me.tips) {
+					me.tips = {};
+				}
+				me.tips[o.value] = o.text;
+			}
+
+			childs.push({
+				tag : 'span',
+				value : o.value || i,
+				cls : 'x-rating-item'
+			});
 		}, this);
 
-		this.starEl = starEl;
+		skell.push({
+			tag : 'div',
+			id : this.id + '-container',
+			children : childs,
+			cls : 'x-rating-container'
+		});
 
-		this.setValue(this.value);
-	},
-	_onUpdateHidden : function() {
-		if(this.hiddenField) {
-			this.hiddenField.dom.value = this.getValue();
+		if(me.endText) {
+			skell.push({
+				tag : 'div',
+				html : me.endText,
+				cls : 'x-rating-text'
+			});
 		}
+
+		if(me.tips) {
+			skell.push({
+				tag : 'div',
+				id : this.id + '-tip',
+				cls : 'x-rating-tip'
+			});
+		}
+		Ext.DomHelper.append(me.inputEl, skell, true);
+		me.items = [];
+		Ext.each(Ext.get(this.id + '-container').query('.x-rating-item'), function(o, i) {
+			me.items.push(Ext.get(o));
+		});
+
+		me.setValue(me.value);
 	},
 	_click : function(e, o) {
-		var rate = o.getAttribute('rate');
-		this.setValue(this.starsValues[rate]);
-	},
-	_mouseout : function() {
+		var v = o.getAttribute('value');
+		if(v == this.value) {
+			v = null;
+		}
+		this.setValue(v);
 
-		Ext.each(this.starsValues, function(o, i) {
-			if(i > this.indexSelected) {
-				this.starEl[i].removeCls('x-star-selected');
-			} else {
-				this.starEl[i].addCls('x-star-selected');
-			}
-
-		}, this);
 	},
-	_mouseover : function(e, o) {
-		var rate = o.getAttribute('rate');
-		Ext.each(this.starsValues, function(o, i) {
-			if(i <= rate) {
-				this.starEl[i].addCls('x-star-selected');
-			} else {
-				this.starEl[i].removeCls('x-star-selected');
-			}
-		}, this);
+	_out : function() {
+		this.markRating(this.value);
+		this.hideTips();
+	},
+	_over : function(e, o) {
+		var v = o.getAttribute('value');
+		this.markRating(v);
+		this.showTips(v);
+
+	},
+	showTips : function(v) {
+		if(this.tips) {
+			var tip = Ext.get(this.id + '-tip');
+			tip.update(this.tips[v]);
+		}
+
+	},
+	hideTips : function() {
+		if(this.tips) {
+			var tip = Ext.get(this.id + '-tip');
+			tip.update('');
+		}
+
 	}
 });
